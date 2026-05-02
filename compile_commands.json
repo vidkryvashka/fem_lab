@@ -1,0 +1,42 @@
+[
+  {
+    "file": "src/main.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wno-unused-variable",
+      "-Wno-unused-function",
+      "-Wno-pointer-arith",
+      "-Iinclude",
+      "-I/opt/homebrew/Cellar/raylib/5.5/include",
+      "-Icomponents/raygui",
+      "-O2",
+      "-c",
+      "src/main.c",
+      "-o",
+      "obj/main.o"
+    ],
+    "directory": "/Users/user/bardachok_local/unik/adaptyvni_metody/fem_lab",
+    "output": "obj/main.o"
+  },
+  {
+    "file": "components/raygui/raygui.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wno-unused-variable",
+      "-Wno-unused-function",
+      "-Wno-pointer-arith",
+      "-Iinclude",
+      "-I/opt/homebrew/Cellar/raylib/5.5/include",
+      "-Icomponents/raygui",
+      "-O2",
+      "-c",
+      "components/raygui/raygui.c",
+      "-o",
+      "obj/raygui.o"
+    ],
+    "directory": "/Users/user/bardachok_local/unik/adaptyvni_metody/fem_lab",
+    "output": "obj/raygui.o"
+  }
+]

@@ -1,0 +1,7 @@
+CompileFlags:
+  Add: [
+    "-Iinclude",
+    "-Icomponents/raygui",
+    "-I/opt/homebrew/include",
+    # "-DRAYGUI_IMPLEMENTATION"
+  ]

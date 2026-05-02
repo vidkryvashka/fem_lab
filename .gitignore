@@ -1,0 +1,7 @@
+obj/
+bin/
+unused/
+test/
+trash/
+compile_commands.json	# platform dependent
+.clangd					# platform dependent
