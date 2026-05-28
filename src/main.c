@@ -1,14 +1,48 @@
 #include <stdlib.h>
 #include "raylib.h"
 // #include "raymath.h"
-#include "raygui.h"
-#define RAYGUI_IMPLEMENTATION
-#include "raygui.h"
-
 
 #include "input_value.h"
 #include "math_utils.h"
 #include "fem.h"
+
+
+void ResetBoundaryConditions(FEM *f, int split[3]) {
+	for (int i = 0; i < f->numElements * 6; i++) {
+		f->zu_flags[i] = false;
+		f->zp_flags[i] = false;
+	}
+	for (int i = 0; i < split[0] * split[1]; i++) {
+		f->zu_flags[i * 6 + 4] = true; 
+		f->zp_flags[(f->numElements - 1 - i) * 6 + 5] = true;
+	}
+}
+
+
+void update_mesh(input_interface_t *ii, FEM *fem, float bodySize[3], int bodySplit[3], Vector3 *deformedNodes) {
+	if (!ii->splitXInput.editMode && !ii->splitYInput.editMode && !ii->splitZInput.editMode) {
+		if (bodySplit[0] != ii->splitXInput.value || bodySplit[1] != ii->splitYInput.value || bodySplit[2] != ii->splitZInput.value) {
+			
+			if (ii->splitXInput.value < 1) ii->splitXInput.value = 1;
+			if (ii->splitYInput.value < 1) ii->splitYInput.value = 1;
+			if (ii->splitZInput.value < 1) ii->splitZInput.value = 1;
+
+			bodySplit[0] = ii->splitXInput.value;
+			bodySplit[1] = ii->splitYInput.value;
+			bodySplit[2] = ii->splitZInput.value;
+
+			bodySize[0] = bodySplit[0] * CUBE_SIZE;
+			bodySize[1] = bodySplit[1] * CUBE_SIZE;
+			bodySize[2] = bodySplit[2] * CUBE_SIZE;
+
+			if (deformedNodes) { free(deformedNodes); deformedNodes = NULL; }
+
+			BuildElements(fem, bodySize, bodySplit);
+			ResetBoundaryConditions(fem, bodySplit);
+		}
+	}
+}
+
 
 int main(void) {
 	CalculateDFIABG(); // Gauss math init
@@ -24,22 +58,30 @@ int main(void) {
 		.projection = CAMERA_PERSPECTIVE
 	};
 
-	// creating Input elements
-	InputValueFloat youngInput = NewInputValueFloat(4.0f);
-	InputValueFloat poissonInput = NewInputValueFloat(0.3f);
-	InputValueFloat pressureInput = NewInputValueFloat(100.0f);
+	input_interface_t ii = (input_interface_t){
+		.splitXInput = NewInputValueInt(5),
+		.splitYInput = NewInputValueInt(1),
+		.splitZInput = NewInputValueInt(1),
+		.youngInput = NewInputValueFloat(4.0f),
+		.poissonInput = NewInputValueFloat(0.3f),
+		.pressureInput = NewInputValueFloat(100.0f)
+	};
 
-	float bodySize[3] = {4.0f, 5.0f, 3.0f};
-	int bodySplit[3] = {2, 2, 2};
+	float bodySize[3] = {
+		ii.splitXInput.value * CUBE_SIZE,
+		ii.splitYInput.value * CUBE_SIZE,
+		ii.splitYInput.value * CUBE_SIZE
+	};
+	int bodySplit[3] = {
+		ii.splitXInput.value,
+		ii.splitYInput.value,
+		ii.splitYInput.value
+	};
 
 	FEM fem = {0};
 	BuildElements(&fem, bodySize, bodySplit);
-	
-	// Початкові ГУ
-	for (int i = 0; i < bodySplit[0] * bodySplit[1]; i++) {
-		fem.zu_flags[i * 6 + 4] = true; 
-		fem.zp_flags[(fem.numElements - 1 - i) * 6 + 5] = true;
-	}
+
+	ResetBoundaryConditions(&fem, bodySplit);
 
 	Vector3 *deformedNodes = NULL;
 	BodyDrawOptions drawOpt = {
@@ -47,51 +89,34 @@ int main(void) {
 		.showVertexes = true
 	};
 
-	printf("here\n");
-
 	while (!WindowShouldClose()) {
 		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
 			UpdateCamera(&camera, CAMERA_THIRD_PERSON);
+		// else
+			// UpdateCamera(&camera, CAMERA_ORBITAL);
 
 		// Render
 		BeginDrawing();
 		ClearBackground(RAYWHITE);
 
 		BeginMode3D(camera);
-			DrawGrid(20, 1.0f);
-			Vector3 origin = (Vector3){ bodySize[0]*0.5f, 0, bodySize[2]*0.5f };
-
+		DrawGrid(20, 1.0f);
+			Vector3 origin = (Vector3){ bodySize[0] * 0.5f, 0.0f, bodySize[2] * 0.5f };
+			camera.target = (Vector3){ 0.0f, bodySize[1] * 0.5f, 0.0f };
 			DrawBodyMesh(&fem, NULL, origin, GRAY, BLUE, drawOpt);
 			if (deformedNodes) {
 				DrawBodyMesh(&fem, deformedNodes, origin, RED, GREEN, drawOpt);
 			}
 		EndMode3D();
 
-		// interface (Raygui)
-		DrawRectangle(10, 10, 310, 180, ColorAlpha(LIGHTGRAY, 0.8f));
-		
-		GuiLabel((Rectangle){ 20, 20, 140, 20 }, "Young's Modulus:");
-		if (GuiTextBox((Rectangle){ 160, 20, 140, 20 }, youngInput.text, 32, youngInput.editMode)) {
-			youngInput.editMode = !youngInput.editMode;
-			if(!youngInput.editMode) UpdateInputValueFloat(&youngInput);
+		show_input_interface(&ii);
+
+		if (run_fem_button()) {
+			if (deformedNodes) { free(deformedNodes); deformedNodes = NULL; }
+			ApplyForcesFEM(&fem, ii.youngInput.value, ii.poissonInput.value, ii.pressureInput.value, &deformedNodes);
 		}
 
-		GuiLabel((Rectangle){ 20, 50, 140, 20 }, "Poisson's Ratio:");
-		if (GuiTextBox((Rectangle){ 160, 50, 140, 20 }, poissonInput.text, 32, poissonInput.editMode)) {
-			poissonInput.editMode = !poissonInput.editMode;
-			if(!poissonInput.editMode) UpdateInputValueFloat(&poissonInput);
-		}
-
-		GuiLabel((Rectangle){ 20, 80, 140, 20 }, "Pressure:");
-		if (GuiTextBox((Rectangle){ 160, 80, 140, 20 }, pressureInput.text, 32, pressureInput.editMode)) {
-			pressureInput.editMode = !pressureInput.editMode;
-			if(!pressureInput.editMode) UpdateInputValueFloat(&pressureInput);
-		}
-
-		if (GuiButton((Rectangle){ 20, 120, 280, 40 }, "RUN FEM ANALYSIS")) {
-			if (deformedNodes) free(deformedNodes);
-			ApplyForcesFEM(&fem, youngInput.value, poissonInput.value, pressureInput.value, &deformedNodes);
-		}
+		update_mesh(&ii, &fem, bodySize, bodySplit, deformedNodes);
 
 		EndDrawing();
 	}

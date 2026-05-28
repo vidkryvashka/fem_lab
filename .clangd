@@ -3,5 +3,6 @@ CompileFlags:
     "-Iinclude",
     "-Icomponents/raygui",
     "-I/opt/homebrew/include",
+    "-I/opt/homebrew/Cellar/raylib/5.5/include",
     # "-DRAYGUI_IMPLEMENTATION"
   ]
