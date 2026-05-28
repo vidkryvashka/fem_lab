@@ -121,27 +121,88 @@ void ApplyForcesFEM(FEM *fem, float young, float poisson, float pressure, Vector
 }
 
 void DrawBodyMesh(FEM *fem, Vector3 *customNodes, Vector3 origin, Color edgeColor, Color vertexColor, BodyDrawOptions opt) {
+	// Кількість сегментів, на яку розбивається кожне ребро кубика для плавності
+	// 1 - пряма лінія між кутами (ігнорує середній вузол)
+	// 2 - ламана лінія через середній вузол (як у попередньому варіанті)
+	// 4 або більше - плавна параболічна крива (найкраще для демонстрації деформації)
+	const int SEGMENTS_PER_EDGE = 5;
+
+	// Топологічна карта 12 ребер для Hex20 елемента.
+	// Кожне ребро задається трьома локальними вузлами: [0] - Старт, [1] - Середина, [2] - Кінець
+	static const int hexEdges[12][3] = {
+		{0, 8, 1},  {1, 9, 2},  {2, 10, 3}, {3, 11, 0}, // Нижня грань
+		{4, 16, 5}, {5, 17, 6}, {6, 18, 7}, {7, 19, 4}, // Верхня грань
+		{0, 12, 4}, {1, 13, 5}, {2, 14, 6}, {3, 15, 7}  // Вертикальні ребра
+	};
+
 	for (int el = 0; el < fem->numElements; el++) {
-		for (int i = 0; i < 20; i++) {
-			int gIdx = fem->nt[el][i];
-			Vector3 p1;
-			if (customNodes) {
-				p1 = Vector3Subtract((Vector3){customNodes[gIdx].x, customNodes[gIdx].z, customNodes[gIdx].y}, origin);
-			} else {
-				p1 = TransformPoint(fem->akt[gIdx], origin);
-			}
-
-			if (opt.showVertexes) DrawSphere(p1, 0.06f, vertexColor);
-
-			if (opt.showEdges && i < 19) {
-				int nextGIdx = fem->nt[el][i + 1];
-				Vector3 p2;
+		
+		// 1. Малювання вузлів (якщо увімкнено)
+		if (opt.showVertexes) {
+			for (int i = 0; i < 20; i++) {
+				int gIdx = fem->nt[el][i];
+				Vector3 p;
 				if (customNodes) {
-					p2 = Vector3Subtract((Vector3){customNodes[nextGIdx].x, customNodes[nextGIdx].z, customNodes[nextGIdx].y}, origin);
+					p = Vector3Subtract((Vector3){customNodes[gIdx].x, customNodes[gIdx].z, customNodes[gIdx].y}, origin);
 				} else {
-					p2 = TransformPoint(fem->akt[nextGIdx], origin);
+					p = TransformPoint(fem->akt[gIdx], origin);
 				}
-				DrawLine3D(p1, p2, edgeColor);
+				DrawSphere(p, 0.06f, vertexColor);
+			}
+		}
+
+		// 2. Малювання ребер кубиків із налаштованою кількістю сегментів
+		if (opt.showEdges) {
+			for (int e = 0; e < 12; e++) {
+				int idxStart  = fem->nt[el][hexEdges[e][0]];
+				int idxMiddle = fem->nt[el][hexEdges[e][1]];
+				int idxEnd    = fem->nt[el][hexEdges[e][2]];
+
+				Vector3 pStart, pMiddle, pEnd;
+
+				if (customNodes) {
+					pStart  = Vector3Subtract((Vector3){customNodes[idxStart].x,  customNodes[idxStart].z,  customNodes[idxStart].y},  origin);
+					pMiddle = Vector3Subtract((Vector3){customNodes[idxMiddle].x, customNodes[idxMiddle].z, customNodes[idxMiddle].y}, origin);
+					pEnd    = Vector3Subtract((Vector3){customNodes[idxEnd].x,    customNodes[idxEnd].z,    customNodes[idxEnd].y},    origin);
+				} else {
+					pStart  = TransformPoint(fem->akt[idxStart],  origin);
+					pMiddle = TransformPoint(fem->akt[idxMiddle], origin);
+					pEnd    = TransformPoint(fem->akt[idxEnd],    origin);
+				}
+
+				// Якщо налаштовано 1 сегмент - просто з'єднуємо початкову і кінцеву точки
+				if (SEGMENTS_PER_EDGE <= 1) {
+					DrawLine3D(pStart, pEnd, edgeColor);
+				} 
+				// Якщо налаштовано 2 сегменти - малюємо дві лінії через серединний вузол
+				else if (SEGMENTS_PER_EDGE == 2) {
+					DrawLine3D(pStart, pMiddle, edgeColor);
+					DrawLine3D(pMiddle, pEnd, edgeColor);
+				} 
+				// Якщо більше 2 - інтерполюємо параболу для отримання гладкої кривої
+				else {
+					Vector3 pPrev = pStart;
+					
+					for (int i = 1; i <= SEGMENTS_PER_EDGE; i++) {
+						// Параметр t змінюється від -1.0 (старт) до 1.0 (кінець ребра)
+						float t = -1.0f + 2.0f * ((float)i / SEGMENTS_PER_EDGE);
+						
+						// Квадратичні функції форми для одновимірного ребра
+						float n1 = -0.5f * t * (1.0f - t);
+						float n2 = 1.0f - t * t;
+						float n3 = 0.5f * t * (1.0f + t);
+
+						// Обчислюємо проміжну точку на кривій
+						Vector3 pCurr;
+						pCurr.x = pStart.x * n1 + pMiddle.x * n2 + pEnd.x * n3;
+						pCurr.y = pStart.y * n1 + pMiddle.y * n2 + pEnd.y * n3;
+						pCurr.z = pStart.z * n1 + pMiddle.z * n2 + pEnd.z * n3;
+
+						// Малюємо поточний маленький шматочок вигнутого ребра
+						DrawLine3D(pPrev, pCurr, edgeColor);
+						pPrev = pCurr;
+					}
+				}
 			}
 		}
 	}

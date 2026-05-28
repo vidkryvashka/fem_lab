@@ -1,30 +1,33 @@
+#include <stdlib.h>
 #include "raylib.h"
-#include "raymath.h"
+// #include "raymath.h"
 #include "raygui.h"
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
+
+
 #include "input_value.h"
 #include "math_utils.h"
 #include "fem.h"
-#include <stdlib.h>
 
 int main(void) {
-	CalculateDFIABG(); // Ініціалізація математики Гаусса
+	CalculateDFIABG(); // Gauss math init
 
 	InitWindow(1280, 720, "FEM Lab");
 	SetTargetFPS(60);
 
-	Camera3D camera = { 0 };
-	camera.position = (Vector3){ 10.0f, 10.0f, 10.0f };
-	camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
-	camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
-	camera.fovy = 45.0f;
-	camera.projection = CAMERA_PERSPECTIVE;
+	Camera3D camera = {
+		.position = (Vector3){ 10.0f, 10.0f, 10.0f },
+		.target = (Vector3){ 0.0f, 0.0f, 0.0f },
+		.up = (Vector3){ 0.0f, 1.0f, 0.0f },
+		.fovy = 45.0f,
+		.projection = CAMERA_PERSPECTIVE
+	};
 
-	// Створюємо Input елементи за допомогою нашого інструментарію
+	// creating Input elements
 	InputValueFloat youngInput = NewInputValueFloat(4.0f);
 	InputValueFloat poissonInput = NewInputValueFloat(0.3f);
-	InputValueFloat pressureInput = NewInputValueFloat(2.0f);
+	InputValueFloat pressureInput = NewInputValueFloat(100.0f);
 
 	float bodySize[3] = {4.0f, 5.0f, 3.0f};
 	int bodySplit[3] = {2, 2, 2};
@@ -39,19 +42,18 @@ int main(void) {
 	}
 
 	Vector3 *deformedNodes = NULL;
-	BodyDrawOptions drawOpt = { .showEdges = true, .showVertexes = true };
+	BodyDrawOptions drawOpt = {
+		.showEdges = true,
+		.showVertexes = true
+	};
+
+	printf("here\n");
 
 	while (!WindowShouldClose()) {
-		// Оновлення камери
-		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-			Vector2 delta = GetMouseDelta();
-			UpdateCameraPro(&camera,
-							(Vector3){0},
-							(Vector3){delta.x * 0.1f, delta.y * 0.1f, 0},
-							GetMouseWheelMove() * 2.0f);
-		}
+		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+			UpdateCamera(&camera, CAMERA_THIRD_PERSON);
 
-		// Рендер
+		// Render
 		BeginDrawing();
 		ClearBackground(RAYWHITE);
 
@@ -65,7 +67,7 @@ int main(void) {
 			}
 		EndMode3D();
 
-		// Інтерфейс (Raygui)
+		// interface (Raygui)
 		DrawRectangle(10, 10, 310, 180, ColorAlpha(LIGHTGRAY, 0.8f));
 		
 		GuiLabel((Rectangle){ 20, 20, 140, 20 }, "Young's Modulus:");
@@ -94,7 +96,6 @@ int main(void) {
 		EndDrawing();
 	}
 
-	// Чистимо пам'ять
 	if (deformedNodes) free(deformedNodes);
 	FreeFEM(&fem);
 
