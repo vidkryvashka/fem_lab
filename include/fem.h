@@ -10,15 +10,23 @@ typedef struct {
 } BodyDrawOptions;
 
 typedef struct {
-	double (*elements)[20][3]; 
-	double (*akt)[3];		   
-	int (*nt)[20];			   
-	bool *zu_flags;			   
-	bool *zp_flags;			   
+	double (*elements)[20][3];
+	double (*akt)[3];
+	int (*nt)[20];
+	bool *zu_flags;
+	bool *zp_flags;
+	const int (*faceCorners)[4];
 	int numElements;
 	int numNodes;
 	int numEquations;
 } FEM;
+
+
+typedef struct {
+	int elementIdx;
+	int sideIdx;
+	bool hit;
+} FaceHitResult;
 
 // Ініціалізація та очищення структури (Керування пам'яттю)
 void FreeFEM(FEM *fem);

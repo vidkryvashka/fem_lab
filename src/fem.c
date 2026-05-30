@@ -4,6 +4,18 @@
 #include <stdlib.h>
 #include <math.h>
 
+// Локальні індекси вузлів для кожної з 6 граней Hex20 (використовуємо лише кутові вузли 0-7 для спрощення геометрії грані)
+// Порядок граней: 0:Ліва, 1:Права, 2:Передня, 3:Задня, 4:Нижня, 5:Верхня (відповідно до вашої нумерації ГУ)
+static const int faceCorners[6][4] = {
+	{ 0, 4, 7, 3 }, // 0: Ліва (X min)   - для погляду зліва
+	{ 1, 2, 6, 5 }, // 1: Права (X max)  - дивиться вправо
+	{ 0, 1, 5, 4 }, // 2: Передня (Z min) - дивиться вперед
+	{ 3, 7, 6, 2 }, // 3: Задня (Z max)   - для погляду ззаду
+	{ 0, 3, 2, 1 }, // 4: Нижня (Y min)   - для погляду знизу
+	{ 4, 5, 6, 7 }  // 5: Верхня (Y max)  - дивиться вгору
+};
+
+
 void FreeFEM(FEM *fem) {
 	if (fem->elements) { free(fem->elements); fem->elements = NULL; }
 	if (fem->akt) { free(fem->akt); fem->akt = NULL; }
@@ -14,6 +26,7 @@ void FreeFEM(FEM *fem) {
 	fem->numNodes = 0;
 	fem->numEquations = 0;
 }
+
 
 void BuildElements(FEM *fem, float bodySize[3], int bodySplit[3]) {
 	FreeFEM(fem);
@@ -68,7 +81,10 @@ void BuildElements(FEM *fem, float bodySize[3], int bodySplit[3]) {
 
 	fem->zu_flags = calloc(fem->numElements * 6, sizeof(bool));
 	fem->zp_flags = calloc(fem->numElements * 6, sizeof(bool));
+
+	fem->faceCorners = faceCorners;
 }
+
 
 void ApplyForcesFEM(FEM *fem, float young, float poisson, float pressure, Vector3 **outDeformed) {
 	if (fem->numEquations == 0) return;
@@ -121,20 +137,15 @@ void ApplyForcesFEM(FEM *fem, float young, float poisson, float pressure, Vector
 }
 
 void DrawBodyMesh(FEM *fem, Vector3 *customNodes, Vector3 origin, Color edgeColor, Color vertexColor, BodyDrawOptions opt) {
-	// Кількість сегментів, на яку розбивається кожне ребро кубика для плавності
-	// 1 - пряма лінія між кутами (ігнорує середній вузол)
-	// 2 - ламана лінія через середній вузол (як у попередньому варіанті)
-	// 4 або більше - плавна параболічна крива (найкраще для демонстрації деформації)
 	const int SEGMENTS_PER_EDGE = 5;
 
-	// Топологічна карта 12 ребер для Hex20 елемента.
-	// Кожне ребро задається трьома локальними вузлами: [0] - Старт, [1] - Середина, [2] - Кінець
 	static const int hexEdges[12][3] = {
 		{0, 8, 1},  {1, 9, 2},  {2, 10, 3}, {3, 11, 0}, // Нижня грань
 		{4, 16, 5}, {5, 17, 6}, {6, 18, 7}, {7, 19, 4}, // Верхня грань
 		{0, 12, 4}, {1, 13, 5}, {2, 14, 6}, {3, 15, 7}  // Вертикальні ребра
 	};
 
+	// --- ЕТАП 1: Малювання непрозорих елементів (сітка, лінії, вузли) ---
 	for (int el = 0; el < fem->numElements; el++) {
 		
 		// 1. Малювання вузлів (якщо увімкнено)
@@ -170,39 +181,60 @@ void DrawBodyMesh(FEM *fem, Vector3 *customNodes, Vector3 origin, Color edgeColo
 					pEnd    = TransformPoint(fem->akt[idxEnd],    origin);
 				}
 
-				// Якщо налаштовано 1 сегмент - просто з'єднуємо початкову і кінцеву точки
 				if (SEGMENTS_PER_EDGE <= 1) {
 					DrawLine3D(pStart, pEnd, edgeColor);
 				} 
-				// Якщо налаштовано 2 сегменти - малюємо дві лінії через серединний вузол
 				else if (SEGMENTS_PER_EDGE == 2) {
 					DrawLine3D(pStart, pMiddle, edgeColor);
 					DrawLine3D(pMiddle, pEnd, edgeColor);
 				} 
-				// Якщо більше 2 - інтерполюємо параболу для отримання гладкої кривої
 				else {
 					Vector3 pPrev = pStart;
-					
 					for (int i = 1; i <= SEGMENTS_PER_EDGE; i++) {
-						// Параметр t змінюється від -1.0 (старт) до 1.0 (кінець ребра)
 						float t = -1.0f + 2.0f * ((float)i / SEGMENTS_PER_EDGE);
-						
-						// Квадратичні функції форми для одновимірного ребра
 						float n1 = -0.5f * t * (1.0f - t);
 						float n2 = 1.0f - t * t;
 						float n3 = 0.5f * t * (1.0f + t);
 
-						// Обчислюємо проміжну точку на кривій
 						Vector3 pCurr;
 						pCurr.x = pStart.x * n1 + pMiddle.x * n2 + pEnd.x * n3;
 						pCurr.y = pStart.y * n1 + pMiddle.y * n2 + pEnd.y * n3;
 						pCurr.z = pStart.z * n1 + pMiddle.z * n2 + pEnd.z * n3;
 
-						// Малюємо поточний маленький шматочок вигнутого ребра
 						DrawLine3D(pPrev, pCurr, edgeColor);
 						pPrev = pCurr;
 					}
 				}
+			}
+		}
+	}
+
+	// --- ЕТАП 2: Малювання напівпрозорих граней ГУ (ВИПРАВЛЕНО: винесено з циклу елементів) ---
+	// Підвищено рівень прозорості (альфа-канал змінено з 0.4f на 0.25f для кращої видимості крізь об'єкт)
+	for (int el = 0; el < fem->numElements; el++) {
+		for (int side = 0; side < 6; side++) {
+			bool isFixed = fem->zu_flags[el * 6 + side];
+			bool isPressed = fem->zp_flags[el * 6 + side];
+			
+			if (isFixed || isPressed) {
+				Vector3 p0 = TransformPoint(fem->elements[el][fem->faceCorners[side][0]], origin);
+				Vector3 p1 = TransformPoint(fem->elements[el][fem->faceCorners[side][1]], origin);
+				Vector3 p2 = TransformPoint(fem->elements[el][fem->faceCorners[side][2]], origin);
+				Vector3 p3 = TransformPoint(fem->elements[el][fem->faceCorners[side][3]], origin);
+
+				Color faceColor = isFixed ? ColorAlpha(BLUE, 0.75f) : ColorAlpha(ORANGE, 0.75f);
+				Color outlineColor = isFixed ? BLUE : RED;
+
+				DrawTriangle3D(p0, p1, p2, faceColor);
+				DrawTriangle3D(p0, p2, p3, faceColor);
+
+				DrawTriangle3D(p0, p2, p1, faceColor);
+				DrawTriangle3D(p0, p3, p2, faceColor);
+
+				DrawLine3D(p0, p1, outlineColor);
+				DrawLine3D(p1, p2, outlineColor);
+				DrawLine3D(p2, p3, outlineColor);
+				DrawLine3D(p3, p0, outlineColor);
 			}
 		}
 	}

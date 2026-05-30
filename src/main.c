@@ -1,13 +1,15 @@
 #include <stdlib.h>
 #include "raylib.h"
+#include <float.h>
+#include <errno.h>
 // #include "raymath.h"
 
-#include "input_value.h"
+#include "input_interface.h"
 #include "math_utils.h"
 #include "fem.h"
 
 
-void ResetBoundaryConditions(FEM *f, int split[3]) {
+static void ResetBoundaryConditions(FEM *f, int split[3]) {
 	for (int i = 0; i < f->numElements * 6; i++) {
 		f->zu_flags[i] = false;
 		f->zp_flags[i] = false;
@@ -19,7 +21,7 @@ void ResetBoundaryConditions(FEM *f, int split[3]) {
 }
 
 
-void update_mesh(input_interface_t *ii, FEM *fem, float bodySize[3], int bodySplit[3], Vector3 *deformedNodes) {
+static void resize_mesh(input_interface_t *ii, float bodySize[3], int bodySplit[3], Vector3 *deformedNodes) {
 	if (!ii->splitXInput.editMode && !ii->splitYInput.editMode && !ii->splitZInput.editMode) {
 		if (bodySplit[0] != ii->splitXInput.value || bodySplit[1] != ii->splitYInput.value || bodySplit[2] != ii->splitZInput.value) {
 			
@@ -36,9 +38,6 @@ void update_mesh(input_interface_t *ii, FEM *fem, float bodySize[3], int bodySpl
 			bodySize[2] = bodySplit[2] * CUBE_SIZE;
 
 			if (deformedNodes) { free(deformedNodes); deformedNodes = NULL; }
-
-			BuildElements(fem, bodySize, bodySplit);
-			ResetBoundaryConditions(fem, bodySplit);
 		}
 	}
 }
@@ -84,18 +83,18 @@ int main(void) {
 	ResetBoundaryConditions(&fem, bodySplit);
 
 	Vector3 *deformedNodes = NULL;
-	BodyDrawOptions drawOpt = {
-		.showEdges = true,
-		.showVertexes = true
-	};
+	BodyDrawOptions drawOpt = (BodyDrawOptions){ .showEdges = true, .showVertexes = true };
+	int bcTypeMode = 0; // 0 - fixed (ZU), 1 - pressure (ZP)
 
 	while (!WindowShouldClose()) {
-		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+		if (GetMouseWheelMove() != 0) {
 			UpdateCamera(&camera, CAMERA_THIRD_PERSON);
-		// else
-			// UpdateCamera(&camera, CAMERA_ORBITAL);
+		} else if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && GetMousePosition().x > 330) {
+			UpdateCamera(&camera, CAMERA_THIRD_PERSON);
+		}
 
-		// Render
+		mouce_click_register(&camera, &fem, bodySize, &deformedNodes, &bcTypeMode);
+
 		BeginDrawing();
 		ClearBackground(RAYWHITE);
 
@@ -109,14 +108,16 @@ int main(void) {
 			}
 		EndMode3D();
 
-		show_input_interface(&ii);
+		render_input_interface(&ii, &bcTypeMode);
 
 		if (run_fem_button()) {
 			if (deformedNodes) { free(deformedNodes); deformedNodes = NULL; }
 			ApplyForcesFEM(&fem, ii.youngInput.value, ii.poissonInput.value, ii.pressureInput.value, &deformedNodes);
 		}
 
-		update_mesh(&ii, &fem, bodySize, bodySplit, deformedNodes);
+		resize_mesh(&ii, bodySize, bodySplit, deformedNodes);
+		BuildElements(&fem, bodySize, bodySplit);
+		ResetBoundaryConditions(&fem, bodySplit);
 
 		EndDrawing();
 	}

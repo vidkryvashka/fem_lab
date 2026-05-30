@@ -1,9 +1,10 @@
-#ifndef INPUT_VALUE_H
-#define INPUT_VALUE_H
+#ifndef INPUT_INTERFACE_H
+#define INPUT_INTERFACE_H
 
 #include <stdbool.h>
 #include "raylib.h"
 #include "raygui.h"
+#include "fem.h"
 
 #define CUBE_SIZE 1.0f
 
@@ -28,18 +29,18 @@ typedef struct {
 	InputValueFloat pressureInput;
 } input_interface_t;
 
-// Конструктори (аналоги NewInputValue у Go)
 InputValueFloat NewInputValueFloat(float val);
 InputValueInt NewInputValueInt(int val);
 
-// Синхронізація тексту з числовим значенням після редагування
 void UpdateInputValueFloat(InputValueFloat *input);
 void UpdateInputValueInt(InputValueInt *input);
+
+void mouce_click_register(Camera3D *camera, FEM *fem, float bodySize[3], Vector3 **deformedNodes, int *bcTypeMode);
 
 inline bool run_fem_button() {
 	return GuiButton((Rectangle){ 20, 290, 280, 45 }, "RUN FEM ANALYSIS");
 }
 
-void show_input_interface(input_interface_t *ii);
+void render_input_interface(input_interface_t *ii, int *bcTypeMode);
 
-#endif // INPUT_VALUE_H
+#endif
