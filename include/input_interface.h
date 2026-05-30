@@ -12,28 +12,22 @@ typedef struct {
 	float value;
 	char text[32];
 	bool editMode;
-} InputValueFloat;
+} InputField;
 
 typedef struct {
-	int value;
-	char text[32];
-	bool editMode;
-} InputValueInt;
-
-typedef struct {
-	InputValueInt splitXInput;
-	InputValueInt splitYInput;
-	InputValueInt splitZInput;
-	InputValueFloat youngInput;
-	InputValueFloat poissonInput;
-	InputValueFloat pressureInput;
+	InputField splitXInput;
+	InputField splitYInput;
+	InputField splitZInput;
+	InputField youngInput;
+	InputField poissonInput;
+	InputField pressureInput;
 } input_interface_t;
 
-InputValueFloat NewInputValueFloat(float val);
-InputValueInt NewInputValueInt(int val);
+InputField NewInputFloat(float val);
+InputField NewInputInt(int val);
 
-void UpdateInputValueFloat(InputValueFloat *input);
-void UpdateInputValueInt(InputValueInt *input);
+void UpdateInputValueFloat(InputField *input);
+void UpdateInputValueInt(InputField *input);
 
 void mouce_click_register(Camera3D *camera, FEM *fem, float bodySize[3], Vector3 **deformedNodes, int *bcTypeMode);
 

@@ -21,25 +21,31 @@ static void ResetBoundaryConditions(FEM *f, int split[3]) {
 }
 
 
-static void resize_mesh(input_interface_t *ii, float bodySize[3], int bodySplit[3], Vector3 *deformedNodes) {
+static bool resize_mesh(input_interface_t *ii, float bodySize[3], int bodySplit[3], Vector3 **deformedNodes, FEM *fem) {
 	if (!ii->splitXInput.editMode && !ii->splitYInput.editMode && !ii->splitZInput.editMode) {
-		if (bodySplit[0] != ii->splitXInput.value || bodySplit[1] != ii->splitYInput.value || bodySplit[2] != ii->splitZInput.value) {
+		if (bodySplit[0] != (int)ii->splitXInput.value || bodySplit[1] != (int)ii->splitYInput.value || bodySplit[2] != (int)ii->splitZInput.value) {
 			
 			if (ii->splitXInput.value < 1) ii->splitXInput.value = 1;
 			if (ii->splitYInput.value < 1) ii->splitYInput.value = 1;
 			if (ii->splitZInput.value < 1) ii->splitZInput.value = 1;
 
-			bodySplit[0] = ii->splitXInput.value;
-			bodySplit[1] = ii->splitYInput.value;
-			bodySplit[2] = ii->splitZInput.value;
+			bodySplit[0] = (int)ii->splitXInput.value;
+			bodySplit[1] = (int)ii->splitYInput.value;
+			bodySplit[2] = (int)ii->splitZInput.value;
 
 			bodySize[0] = bodySplit[0] * CUBE_SIZE;
 			bodySize[1] = bodySplit[1] * CUBE_SIZE;
 			bodySize[2] = bodySplit[2] * CUBE_SIZE;
 
-			if (deformedNodes) { free(deformedNodes); deformedNodes = NULL; }
+			if (*deformedNodes) { free(*deformedNodes); *deformedNodes = NULL; }
+			
+			FreeFEM(fem); 
+			BuildElements(fem, bodySize, bodySplit);
+			ResetBoundaryConditions(fem, bodySplit);
+			return true; // changed
 		}
 	}
+	return false; // not changed
 }
 
 
@@ -58,12 +64,12 @@ int main(void) {
 	};
 
 	input_interface_t ii = (input_interface_t){
-		.splitXInput = NewInputValueInt(5),
-		.splitYInput = NewInputValueInt(1),
-		.splitZInput = NewInputValueInt(1),
-		.youngInput = NewInputValueFloat(4.0f),
-		.poissonInput = NewInputValueFloat(0.3f),
-		.pressureInput = NewInputValueFloat(100.0f)
+		.splitXInput = NewInputInt(5),
+		.splitYInput = NewInputInt(1),
+		.splitZInput = NewInputInt(1),
+		.youngInput = NewInputFloat(4.0f),
+		.poissonInput = NewInputFloat(0.3f),
+		.pressureInput = NewInputFloat(100.0f)
 	};
 
 	float bodySize[3] = {
@@ -71,10 +77,11 @@ int main(void) {
 		ii.splitYInput.value * CUBE_SIZE,
 		ii.splitYInput.value * CUBE_SIZE
 	};
+
 	int bodySplit[3] = {
-		ii.splitXInput.value,
-		ii.splitYInput.value,
-		ii.splitYInput.value
+		(int)ii.splitXInput.value,
+		(int)ii.splitYInput.value,
+		(int)ii.splitZInput.value
 	};
 
 	FEM fem = {0};
@@ -115,9 +122,7 @@ int main(void) {
 			ApplyForcesFEM(&fem, ii.youngInput.value, ii.poissonInput.value, ii.pressureInput.value, &deformedNodes);
 		}
 
-		resize_mesh(&ii, bodySize, bodySplit, deformedNodes);
-		BuildElements(&fem, bodySize, bodySplit);
-		ResetBoundaryConditions(&fem, bodySplit);
+		resize_mesh(&ii, bodySize, bodySplit, &deformedNodes, &fem);
 
 		EndDrawing();
 	}

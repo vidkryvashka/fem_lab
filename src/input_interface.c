@@ -8,27 +8,23 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
-InputValueFloat NewInputValueFloat(float val) {
-	InputValueFloat input;
-	input.value = val;
-	input.editMode = false;
-	snprintf(input.text, sizeof(input.text), "%.2f", val);
-	return input;
+InputField NewInputFloat(float val) {
+	InputField in = { .value = val, .editMode = false };
+	snprintf(in.text, sizeof(in.text), "%.2f", val);
+	return in;
 }
 
-InputValueInt NewInputValueInt(int val) {
-	InputValueInt input;
-	input.value = val;
-	input.editMode = false;
-	snprintf(input.text, sizeof(input.text), "%d", val);
-	return input;
+InputField NewInputInt(int val) {
+	InputField in = { .value = (float)val, .editMode = false };
+	snprintf(in.text, sizeof(in.text), "%d", val);
+	return in;
 }
 
-void UpdateInputValueFloat(InputValueFloat *input) {
+void UpdateInputValueFloat(InputField *input) {
 	input->value = strtof(input->text, NULL);
 }
 
-void UpdateInputValueInt(InputValueInt *input) {
+void UpdateInputValueInt(InputField *input) {
 	input->value = (int)strtol(input->text, NULL, 10);
 }
 
@@ -92,56 +88,49 @@ void mouce_click_register(Camera3D *camera, FEM *fem, float bodySize[3], Vector3
 }
 
 
+// ПОВЕРНЕНО СТАРУ НАДІЙНУ ЛОГІКУ, АЛЕ В КОМПАКТНОМУ ВИГЛЯДІ
+void DrawGuiInputField(Rectangle rect, const char *label, InputField *field, bool isInt) {
+	GuiLabel((Rectangle){ rect.x, rect.y, 140, rect.height }, label);
+
+	// Точно так само, як у вашому першому робочому коді:
+	if (GuiTextBox((Rectangle){ rect.x + 140, rect.y, rect.width - 140, rect.height }, field->text, 32, field->editMode)) {
+		field->editMode = !field->editMode;
+		
+		// Оновлюємо значення тільки тоді, коли користувач вийшов з режиму редагування
+		if (!field->editMode) {
+			if (isInt) {
+				UpdateInputValueInt(field);
+				snprintf(field->text, sizeof(field->text), "%d", (int)field->value);
+			} else {
+				UpdateInputValueFloat(field);
+			}
+		}
+	}
+}
+
+
 void render_input_interface(input_interface_t *ii, int *bcTypeMode) {
+	// --- БЛОК 1: ГЕОМЕТРІЯ ---
 	DrawRectangle(10, 10, 310, 150, ColorAlpha(LIGHTGRAY, 0.8f));
 	DrawRectangleLines(10, 10, 310, 150, GRAY);
 	GuiLabel((Rectangle){ 20, 15, 280, 20 }, "[ GEOMETRY CONFIGURATION ]");
 
-	GuiLabel((Rectangle){ 20, 40, 140, 20 }, "Blocks X (Length):");
-	if (GuiTextBox((Rectangle){ 160, 40, 140, 20 }, ii->splitXInput.text, 32, ii->splitXInput.editMode)) {
-		ii->splitXInput.editMode = !ii->splitXInput.editMode;
-		if (!ii->splitXInput.editMode) UpdateInputValueInt(&ii->splitXInput);
-	}
+	DrawGuiInputField((Rectangle){ 20, 40, 280, 20 }, "Blocks X (Length):",  &ii->splitXInput, true);
+	DrawGuiInputField((Rectangle){ 20, 70, 280, 20 }, "Blocks Y (Width):",   &ii->splitYInput, true);
+	DrawGuiInputField((Rectangle){ 20, 100, 280, 20 }, "Blocks Z (Height):", &ii->splitZInput, true);
 
-	GuiLabel((Rectangle){ 20, 70, 140, 20 }, "Blocks Y (Width):");
-	if (GuiTextBox((Rectangle){ 160, 70, 140, 20 }, ii->splitYInput.text, 32, ii->splitYInput.editMode)) {
-		ii->splitYInput.editMode = !ii->splitYInput.editMode;
-		if (!ii->splitYInput.editMode) UpdateInputValueInt(&ii->splitYInput);
-	}
-
-	GuiLabel((Rectangle){ 20, 100, 140, 20 }, "Blocks Z (Height):");
-	if (GuiTextBox((Rectangle){ 160, 100, 140, 20 }, ii->splitZInput.text, 32, ii->splitZInput.editMode)) {
-		ii->splitZInput.editMode = !ii->splitZInput.editMode;
-		if (!ii->splitZInput.editMode) UpdateInputValueInt(&ii->splitZInput);
-	}
-
-
+	// --- БЛОК 2: ФІЗИЧНІ ПАРАМЕТРИ ---
 	DrawRectangle(10, 170, 310, 190, ColorAlpha(LIGHTGRAY, 0.8f));
 	DrawRectangleLines(10, 170, 310, 190, GRAY);
 
-	GuiLabel((Rectangle){ 20, 180, 140, 20 }, "Young's Modulus:");
-	if (GuiTextBox((Rectangle){ 160, 180, 140, 20 }, ii->youngInput.text, 32, ii->youngInput.editMode)) {
-		ii->youngInput.editMode = !ii->youngInput.editMode;
-		if(!ii->youngInput.editMode) UpdateInputValueFloat(&ii->youngInput);
-	}
+	DrawGuiInputField((Rectangle){ 20, 180, 280, 20 }, "Young's Modulus:", &ii->youngInput,   false);
+	DrawGuiInputField((Rectangle){ 20, 210, 280, 20 }, "Poisson's Ratio:", &ii->poissonInput, false);
+	DrawGuiInputField((Rectangle){ 20, 240, 280, 20 }, "Pressure:",        &ii->pressureInput, false);
 
-	GuiLabel((Rectangle){ 20, 210, 140, 20 }, "Poisson's Ratio:");
-	if (GuiTextBox((Rectangle){ 160, 210, 140, 20 }, ii->poissonInput.text, 32, ii->poissonInput.editMode)) {
-		ii->poissonInput.editMode = !ii->poissonInput.editMode;
-		if(!ii->poissonInput.editMode) UpdateInputValueFloat(&ii->poissonInput);
-	}
-
-	GuiLabel((Rectangle){ 20, 240, 140, 20 }, "Pressure:");
-	if (GuiTextBox((Rectangle){ 160, 240, 140, 20 }, ii->pressureInput.text, 32, ii->pressureInput.editMode)) {
-		ii->pressureInput.editMode = !ii->pressureInput.editMode;
-		if(!ii->pressureInput.editMode) UpdateInputValueFloat(&ii->pressureInput);
-	}
-
+	// --- БЛОК 3: ГРАНИЧНІ УМОВИ ---
 	DrawRectangle(10, 370, 310, 90, ColorAlpha(LIGHTGRAY, 0.8f));
 	DrawRectangleLines(10, 370, 310, 90, GRAY);
 
-	if (GuiToggleGroup((Rectangle){ 20, 380, 140, 25 }, "SET FIXATION (ZU);SET PRESSURE (ZP)", bcTypeMode)) {
-		// changed mode
-	}
+	GuiToggleGroup((Rectangle){ 20, 380, 140, 25 }, "SET FIXATION (ZU);SET PRESSURE (ZP)", bcTypeMode);
 	GuiLabel((Rectangle){ 20, 415, 120, 40 }, "Right Click on a 3D Face to toggle boundary\ncondition. Blue = Fixed, Orange = Loaded.");
 }
