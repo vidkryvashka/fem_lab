@@ -21,21 +21,17 @@ typedef struct {
 	int numEquations;
 } FEM;
 
-
 typedef struct {
 	int elementIdx;
 	int sideIdx;
 	bool hit;
 } FaceHitResult;
 
-// Ініціалізація та очищення структури (Керування пам'яттю)
 void FreeFEM(FEM *fem);
 void BuildElements(FEM *fem, float bodySize[3], int bodySplit[3]);
 
-// Обчислення МСЕ розрахунку сил
-void ApplyForcesFEM(FEM *fem, float young, float poisson, float pressure, Vector3 **outDeformed);
+void ApplyForcesFEM(FEM *fem, float young, float poisson, float pressure, Vector3 **outDeformed, double **outStresses);
 
-// Функція рендерингу отриманої сітки елементів
-void DrawBodyMesh(FEM *fem, Vector3 *customNodes, Vector3 origin, Color edgeColor, Color vertexColor, BodyDrawOptions opt);
+void DrawBodyMesh(FEM *fem, Vector3 *customNodes, double *stresses, Vector3 origin, Color edgeColor, Color vertexColor, BodyDrawOptions opt);
 
 #endif // FEM_H

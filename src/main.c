@@ -1,8 +1,5 @@
 #include <stdlib.h>
 #include "raylib.h"
-#include <float.h>
-#include <errno.h>
-// #include "raymath.h"
 
 #include "input_interface.h"
 #include "math_utils.h"
@@ -50,7 +47,9 @@ static bool resize_mesh(input_interface_t *ii, float bodySize[3], int bodySplit[
 
 
 int main(void) {
-	CalculateDFIABG(); // Gauss math init
+	CalculateDFIABG();
+	CalculateDPSITE();
+	CalculateDPsiteXYZdeNT();
 
 	InitWindow(1280, 720, "FEM Lab");
 	SetTargetFPS(60);
@@ -67,9 +66,9 @@ int main(void) {
 		.splitXInput = NewInputInt(5),
 		.splitYInput = NewInputInt(1),
 		.splitZInput = NewInputInt(1),
-		.youngInput = NewInputFloat(4.0f),
+		.youngInput = NewInputFloat(1200.0f),
 		.poissonInput = NewInputFloat(0.3f),
-		.pressureInput = NewInputFloat(100.0f)
+		.pressureInput = NewInputFloat(1.0f)
 	};
 
 	float bodySize[3] = {
@@ -90,6 +89,7 @@ int main(void) {
 	ResetBoundaryConditions(&fem, bodySplit);
 
 	Vector3 *deformedNodes = NULL;
+	double *elementStresses = NULL;
 	BodyDrawOptions drawOpt = (BodyDrawOptions){ .showEdges = true, .showVertexes = true };
 	int bcTypeMode = 0; // 0 - fixed (ZU), 1 - pressure (ZP)
 
@@ -106,20 +106,19 @@ int main(void) {
 		ClearBackground(RAYWHITE);
 
 		BeginMode3D(camera);
-		DrawGrid(20, 1.0f);
+			DrawGrid(20, 1.0f);
 			Vector3 origin = (Vector3){ bodySize[0] * 0.5f, 0.0f, bodySize[2] * 0.5f };
 			camera.target = (Vector3){ 0.0f, bodySize[1] * 0.5f, 0.0f };
-			DrawBodyMesh(&fem, NULL, origin, GRAY, BLUE, drawOpt);
+			DrawBodyMesh(&fem, NULL, NULL, origin, GRAY, BLUE, drawOpt);
 			if (deformedNodes) {
-				DrawBodyMesh(&fem, deformedNodes, origin, RED, GREEN, drawOpt);
+				DrawBodyMesh(&fem, deformedNodes, elementStresses, origin, RED, GREEN, drawOpt);
 			}
 		EndMode3D();
 
 		render_input_interface(&ii, &bcTypeMode);
 
 		if (run_fem_button()) {
-			// if (deformedNodes) { free(deformedNodes); deformedNodes = NULL; }
-			ApplyForcesFEM(&fem, ii.youngInput.value, ii.poissonInput.value, ii.pressureInput.value, &deformedNodes);
+			ApplyForcesFEM(&fem, ii.youngInput.value, ii.poissonInput.value, ii.pressureInput.value, &deformedNodes, &elementStresses);
 		}
 
 		resize_mesh(&ii, bodySize, bodySplit, &deformedNodes, &fem);
@@ -127,6 +126,7 @@ int main(void) {
 		EndDrawing();
 	}
 
+	if (elementStresses) free(elementStresses);
 	if (deformedNodes) free(deformedNodes);
 	FreeFEM(&fem);
 

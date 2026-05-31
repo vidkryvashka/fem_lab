@@ -3,24 +3,30 @@
 
 #include "raylib.h"
 
-// Глобальні константи інтегрування
+// Global integration constants
 extern const double gaussianCoords[3];
 extern const double gaussianConst[3];
 extern const double localPoints3D[20][3];
 
-// Глобальний тривимірний масив для похідних функцій форми
+// Global 3D array for derived shape functions
 extern double dfiabg[27][20][3];
 
-// Ініціалізація матриць функцій форми (викликається один раз в main)
+// Initialization of form function matrices (called once in main)
 void CalculateDFIABG(void);
 
-// Трансформація координат з урахуванням специфіки осей (заміна Y та Z місцями)
+// Transformation of coordinates taking into account the specifics of the axes (replacement of Y and Z by places)
 Vector3 TransformPoint(double p[3], Vector3 origin);
 
-// Функція створення локального 20-вузлового скінченного елемента (куба)
+// Function to create a local 20-node finite element (cube)
 void CreateCube(double aStart, double aEnd, double bStart, double bEnd, double cStart, double cEnd, double outCube[20][3]);
 
-// Ітераційний СЛАР солвер (Метод спряжених градієнтів)
+// Iterative SLIE solver (Conjugate gradient method)
 void SolveCG(double *A, double *b, double *x, int n);
+
+extern double dpsite[9][8][2];
+extern double dpsiteXYZdeNT[9][8];
+
+void CalculateDPSITE(void);
+void CalculateDPsiteXYZdeNT(void);
 
 #endif // MATH_UTILS_H

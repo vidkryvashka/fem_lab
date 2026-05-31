@@ -1,4 +1,5 @@
 # FEM lab
-адаптивні методи магістратура 5 курс ЛНУ
+adaptive methods
 
-The Pythagorean theorem is expressed as $$a^2 + b^2 = c^2$$.
+5th year of Ivan Franko LNU
+
