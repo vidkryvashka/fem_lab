@@ -2,8 +2,6 @@
 #define INPUT_INTERFACE_H
 
 #include <stdbool.h>
-#include "raylib.h"
-#include "raygui.h"
 #include "fem.h"
 
 #define CUBE_SIZE 1.0f
@@ -29,11 +27,9 @@ InputField NewInputInt(int val);
 void UpdateInputValueFloat(InputField *input);
 void UpdateInputValueInt(InputField *input);
 
-void mouce_click_register(Camera3D *camera, FEM *fem, float bodySize[3], Vector3 **deformedNodes, int *bcTypeMode);
+bool run_fem_button();
 
-inline bool run_fem_button() {
-	return GuiButton((Rectangle){ 20, 290, 280, 45 }, "RUN FEM ANALYSIS");
-}
+void mouce_click_register(Camera3D *camera, FEM *fem, float bodySize[3], Vector3 **deformedNodes, int *bcTypeMode);
 
 void render_input_interface(input_interface_t *ii, int *bcTypeMode);
 

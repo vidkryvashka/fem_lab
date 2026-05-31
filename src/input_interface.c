@@ -4,7 +4,6 @@
 #include <float.h>
 #include "raylib.h"
 #include "math_utils.h"
-#include "raygui.h"
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
@@ -29,7 +28,7 @@ void UpdateInputValueInt(InputField *input) {
 }
 
 
-FaceHitResult CheckFaceClick(FEM *fem, Ray ray, Vector3 origin) {
+static FaceHitResult CheckFaceClick(FEM *fem, Ray ray, Vector3 origin) {
 	FaceHitResult result = { .elementIdx = -1, .sideIdx = -1, .hit = false };
 	float closestDist = FLT_MAX;
 
@@ -88,15 +87,17 @@ void mouce_click_register(Camera3D *camera, FEM *fem, float bodySize[3], Vector3
 }
 
 
-// ПОВЕРНЕНО СТАРУ НАДІЙНУ ЛОГІКУ, АЛЕ В КОМПАКТНОМУ ВИГЛЯДІ
-void DrawGuiInputField(Rectangle rect, const char *label, InputField *field, bool isInt) {
+bool run_fem_button() {
+	return GuiButton((Rectangle){ 20, 290, 280, 45 }, "RUN FEM ANALYSIS");
+}
+
+
+static void DrawGuiInputField(Rectangle rect, const char *label, InputField *field, bool isInt) {
 	GuiLabel((Rectangle){ rect.x, rect.y, 140, rect.height }, label);
 
-	// Точно так само, як у вашому першому робочому коді:
 	if (GuiTextBox((Rectangle){ rect.x + 140, rect.y, rect.width - 140, rect.height }, field->text, 32, field->editMode)) {
 		field->editMode = !field->editMode;
-		
-		// Оновлюємо значення тільки тоді, коли користувач вийшов з режиму редагування
+
 		if (!field->editMode) {
 			if (isInt) {
 				UpdateInputValueInt(field);
@@ -110,7 +111,6 @@ void DrawGuiInputField(Rectangle rect, const char *label, InputField *field, boo
 
 
 void render_input_interface(input_interface_t *ii, int *bcTypeMode) {
-	// --- БЛОК 1: ГЕОМЕТРІЯ ---
 	DrawRectangle(10, 10, 310, 150, ColorAlpha(LIGHTGRAY, 0.8f));
 	DrawRectangleLines(10, 10, 310, 150, GRAY);
 	GuiLabel((Rectangle){ 20, 15, 280, 20 }, "[ GEOMETRY CONFIGURATION ]");
@@ -119,7 +119,6 @@ void render_input_interface(input_interface_t *ii, int *bcTypeMode) {
 	DrawGuiInputField((Rectangle){ 20, 70, 280, 20 }, "Blocks Y (Width):",   &ii->splitYInput, true);
 	DrawGuiInputField((Rectangle){ 20, 100, 280, 20 }, "Blocks Z (Height):", &ii->splitZInput, true);
 
-	// --- БЛОК 2: ФІЗИЧНІ ПАРАМЕТРИ ---
 	DrawRectangle(10, 170, 310, 190, ColorAlpha(LIGHTGRAY, 0.8f));
 	DrawRectangleLines(10, 170, 310, 190, GRAY);
 
@@ -127,7 +126,6 @@ void render_input_interface(input_interface_t *ii, int *bcTypeMode) {
 	DrawGuiInputField((Rectangle){ 20, 210, 280, 20 }, "Poisson's Ratio:", &ii->poissonInput, false);
 	DrawGuiInputField((Rectangle){ 20, 240, 280, 20 }, "Pressure:",        &ii->pressureInput, false);
 
-	// --- БЛОК 3: ГРАНИЧНІ УМОВИ ---
 	DrawRectangle(10, 370, 310, 90, ColorAlpha(LIGHTGRAY, 0.8f));
 	DrawRectangleLines(10, 370, 310, 90, GRAY);
 

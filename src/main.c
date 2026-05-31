@@ -75,7 +75,7 @@ int main(void) {
 	float bodySize[3] = {
 		ii.splitXInput.value * CUBE_SIZE,
 		ii.splitYInput.value * CUBE_SIZE,
-		ii.splitYInput.value * CUBE_SIZE
+		ii.splitZInput.value * CUBE_SIZE
 	};
 
 	int bodySplit[3] = {
@@ -118,7 +118,7 @@ int main(void) {
 		render_input_interface(&ii, &bcTypeMode);
 
 		if (run_fem_button()) {
-			if (deformedNodes) { free(deformedNodes); deformedNodes = NULL; }
+			// if (deformedNodes) { free(deformedNodes); deformedNodes = NULL; }
 			ApplyForcesFEM(&fem, ii.youngInput.value, ii.poissonInput.value, ii.pressureInput.value, &deformedNodes);
 		}
 

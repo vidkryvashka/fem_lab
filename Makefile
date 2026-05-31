@@ -43,7 +43,20 @@ clean:
 	rm -f $(OBJS)
 	rm -rf $(BIN_DIR)/*
 
-.PHONY: all prepare clean run
+single_file: $(SRCS)
+	@mkdir -p trash
+	@: > trash/single_file.c
+	@for dir in src include; do \
+		if [ -d "$$dir" ]; then \
+			find "$$dir" -type f | while read -r file; do \
+				echo "/* --- start: $$file --- */" >> trash/single_file.c; \
+				cat "$$file" >> trash/single_file.c; \
+				echo "\n/* --- end: $$file --- */\n" >> trash/single_file.c; \
+			done; \
+		fi \
+	done
+
+.PHONY: all prepare compile run clean single_file
 
 help:
 	@echo "Available targets:"

@@ -126,6 +126,7 @@ void ApplyForcesFEM(FEM *fem, float young, float poisson, float pressure, Vector
 
 	SolveCG(mg, f, u, fem->numEquations);
 
+	if (*outDeformed) { free(*outDeformed); *outDeformed = NULL; }
 	*outDeformed = malloc(fem->numNodes * sizeof(Vector3));
 	for (int i = 0; i < fem->numNodes; i++) {
 		(*outDeformed)[i].x = (float)(fem->akt[i][0] + u[i * 3 + 0]);
