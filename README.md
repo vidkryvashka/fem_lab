@@ -1,10 +1,10 @@
 # 3D Finite Element Method (FEM) Solver & Visualizer
 
-![./assets/fem.gif](./assets/fem.gif)
+![large ./docs/example.gif](./docs/example.gif)
 
 5th year of Ivan Franko LNU
 
-A software suite for calculating the stress-strain state of 3D bodies using the Finite Element Method (FEM). The project is written in C and utilizes the **Raylib** graphics library for real-time rendering of the mesh, deformations, and stress heatmaps.
+A software suite for calculating the stress-strain state of 3D bodies using the Finite Element Method (FEM). The project utilizes the **Raylib** graphics library for real-time rendering of the mesh, deformations, and stress heatmaps.
 
 ---
 
@@ -104,7 +104,7 @@ $$\sigma_{v} = \sqrt{\frac{1}{2} \left[ (\sigma_{xx}-\sigma_{yy})^2 + (\sigma_{y
 
 To compile the project, the [Raylib](https://www.raylib.com/) library and a standard C compiler (gcc/clang) are required.
 
-### Linux / macOS
+### macOS / Linux (not tested)
 
 ```bash
 # Compilation and run

@@ -73,7 +73,6 @@ void FreeFEM(FEM *fem) {
 
 void BuildElements(FEM *fem, float bodySize[3], int bodySplit[3]) {
 	FreeFEM(fem);
-
 	fem->numElements = bodySplit[0] * bodySplit[1] * bodySplit[2];
 	fem->elements = malloc(fem->numElements * sizeof(*fem->elements));
 
@@ -295,7 +294,7 @@ void ApplyForcesFEM(FEM *fem, float young, float poisson, float pressure, Vector
 		}
 	}
 
-	// 4. SOLUTION OF SLAR
+	// 4. SOLUTION OF SLIE
 	SolveCG(mg, f, u, fem->numEquations);
 
 	// 5. UPDATE OF COORDINATES AND VOLTAGE
