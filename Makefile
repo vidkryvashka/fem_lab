@@ -12,6 +12,13 @@ CFLAGS = $(CFLAGS_W) $(CFLAGS_I) -O2
 
 # platform dependent
 RAYLIB_LINK = $(shell pkg-config --libs raylib) -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
+
+ifeq ($(PLATFORM),macOS)
+	RAYLIB_LINK = $(shell pkg-config --libs raylib) -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
+else ifeq ($(PLATFORM),Linux)
+	RAYLIB_LINK = -lraylib -lGL -lrt -lX11
+endif
+
 LDFLAGS  = $(RAYLIB_LINK) -lm -lpthread -ldl
 
 SRCS = $(shell find $(SRC_DIR) -name "*.c")

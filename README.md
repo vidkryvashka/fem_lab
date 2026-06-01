@@ -100,7 +100,7 @@ $$\sigma_{v} = \sqrt{\frac{1}{2} \left[ (\sigma_{xx}-\sigma_{yy})^2 + (\sigma_{y
 
 ---
 
-## 🛠 Build & Run
+## Build & Run
 
 To compile the project, the [Raylib](https://www.raylib.com/) library and a standard C compiler (gcc/clang) are required.
 
